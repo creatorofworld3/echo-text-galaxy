@@ -1,13 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Star, FileText, Calendar, Hash, Plus } from 'lucide-react';
+import { Search, Star, FileText, Calendar, Hash, Plus, RefreshCw } from 'lucide-react';
 import { useNotesStore } from '@/store/notesStore';
 import { Note } from '@/types/note';
+import { useToast } from '@/hooks/use-toast';
 
 interface NotesListProps {
   onSelectNote: (noteId: string) => void;
@@ -20,10 +21,16 @@ export const NotesList: React.FC<NotesListProps> = ({
   onCreateNote, 
   selectedNoteId 
 }) => {
-  const { notes, tags } = useNotesStore();
+  const { notes, tags, isLoading, syncNotes, fetchNotes } = useNotesStore();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'date' | 'title' | 'favorite'>('date');
+
+  // Fetch notes on component mount
+  useEffect(() => {
+    fetchNotes();
+  }, [fetchNotes]);
 
   const filteredNotes = notes
     .filter((note) => {
@@ -47,6 +54,23 @@ export const NotesList: React.FC<NotesListProps> = ({
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
 
+  const handleSync = async () => {
+    try {
+      await syncNotes();
+      toast({
+        title: "Sync Complete",
+        description: "Your notes have been synced successfully.",
+      });
+    } catch (error) {
+      console.error('Sync failed:', error);
+      toast({
+        title: "Sync Failed",
+        description: "Failed to sync notes. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatDate = (date: Date) => {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
@@ -68,10 +92,22 @@ export const NotesList: React.FC<NotesListProps> = ({
       <div className="p-4 space-y-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">My Notes</h2>
-          <Button onClick={onCreateNote} size="sm" className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Note
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleSync} 
+              size="sm" 
+              variant="outline"
+              disabled={isLoading}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Sync
+            </Button>
+            <Button onClick={onCreateNote} size="sm" className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Note
+            </Button>
+          </div>
         </div>
         
         <div className="relative">
@@ -109,7 +145,12 @@ export const NotesList: React.FC<NotesListProps> = ({
 
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-3">
-          {filteredNotes.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p>Loading notes...</p>
+            </div>
+          ) : filteredNotes.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p className="text-lg mb-2">No notes found</p>

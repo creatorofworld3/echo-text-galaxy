@@ -2,16 +2,20 @@
 import React, { useState } from 'react';
 import { NotesList } from '@/components/NotesList';
 import { NoteEditor } from '@/components/NoteEditor';
+import { AuthPage } from '@/components/AuthPage';
+import { SettingsDialog } from '@/components/SettingsDialog';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { BookOpen, Settings, Cloud, Zap } from 'lucide-react';
+import { BookOpen, Cloud, Zap } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/hooks/useAuth';
 
 const Index = () => {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const { theme } = useTheme();
+  const { user, loading } = useAuth();
 
   const handleSelectNote = (noteId: string) => {
     setSelectedNoteId(noteId);
@@ -27,6 +31,20 @@ const Index = () => {
     setShowEditor(false);
     setSelectedNoteId(null);
   };
+
+  // Show loading spinner while checking auth
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Show auth page if not logged in
+  if (!user) {
+    return <AuthPage />;
+  }
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -47,20 +65,17 @@ const Index = () => {
               </div>
               <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 rounded-full">
                 <Zap className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">AI Ready</span>
+                <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">Synced</span>
               </div>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Cloud className="h-4 w-4" />
-              <span className="hidden sm:inline">Sync</span>
-            </Button>
-            <Button variant="ghost" size="sm">
-              <Settings className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <span>Welcome, {user.user_metadata?.full_name || user.email}</span>
+            </div>
             <Separator orientation="vertical" className="h-6" />
+            <SettingsDialog />
             <ThemeToggle />
           </div>
         </div>
@@ -91,7 +106,7 @@ const Index = () => {
                   <BookOpen className="h-16 w-16 mx-auto text-primary/60 mb-4" />
                   <h2 className="text-2xl font-bold mb-2">Welcome to Notepad Storer</h2>
                   <p className="text-muted-foreground text-lg">
-                    Your intelligent note-taking companion with AI-powered features
+                    Your intelligent note-taking companion with cloud sync
                   </p>
                 </div>
                 
@@ -102,11 +117,11 @@ const Index = () => {
                   </div>
                   <div className="flex items-center gap-2 justify-center">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Smart tagging and organization</span>
+                    <span>Real-time sync across devices</span>
                   </div>
                   <div className="flex items-center gap-2 justify-center">
                     <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                    <span>Rich text editing with Markdown</span>
+                    <span>Smart tagging and organization</span>
                   </div>
                 </div>
 

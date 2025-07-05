@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Save, Download, Upload, FileText, Hash, Star, StarOff } from 'lucide-react';
+import { Save, Download, FileText, Hash, Star, StarOff, ArrowLeft } from 'lucide-react';
 import { useNotesStore } from '@/store/notesStore';
+import { useToast } from '@/hooks/use-toast';
 
 interface NoteEditorProps {
   noteId: string | null;
@@ -15,13 +16,15 @@ interface NoteEditorProps {
 }
 
 export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId, onClose }) => {
-  const { notes, addNote, updateNote, addTag } = useNotesStore();
+  const { notes, addNote, updateNote } = useNotesStore();
+  const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const currentNote = noteId ? notes.find(n => n.id === noteId) : null;
 
@@ -43,43 +46,55 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId, onClose }) => {
   useEffect(() => {
     const autoSaveInterval = setInterval(() => {
       if (title.trim() || content.trim()) {
-        handleSave();
+        handleSave(false);
       }
     }, 30000); // Auto-save every 30 seconds
 
     return () => clearInterval(autoSaveInterval);
   }, [title, content, tags, isFavorite]);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async (showToast = true) => {
     if (!title.trim() && !content.trim()) return;
 
-    const noteData = {
-      title: title || 'Untitled Note',
-      content,
-      tags,
-      isFavorite,
-      updatedAt: new Date(),
-    };
-
-    if (currentNote) {
-      updateNote(currentNote.id, noteData);
-    } else {
-      const newNote = {
-        ...noteData,
-        id: Date.now().toString(),
-        createdAt: new Date(),
+    setSaving(true);
+    try {
+      const noteData = {
+        title: title || 'Untitled Note',
+        content,
+        tags,
+        isFavorite,
       };
-      addNote(newNote);
+
+      if (currentNote) {
+        await updateNote(currentNote.id, noteData);
+      } else {
+        await addNote(noteData);
+      }
+      
+      setLastSaved(new Date());
+      
+      if (showToast) {
+        toast({
+          title: "Note Saved",
+          description: "Your note has been saved successfully.",
+        });
+      }
+    } catch (error) {
+      console.error('Error saving note:', error);
+      toast({
+        title: "Save Failed",
+        description: "Failed to save your note. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
-    
-    setLastSaved(new Date());
-  }, [title, content, tags, isFavorite, currentNote, addNote, updateNote]);
+  }, [title, content, tags, isFavorite, currentNote, addNote, updateNote, toast]);
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
       const tagToAdd = newTag.trim();
       setTags([...tags, tagToAdd]);
-      addTag(tagToAdd);
       setNewTag('');
     }
   };
@@ -103,12 +118,25 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId, onClose }) => {
     a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
+
+    toast({
+      title: "Note Exported",
+      description: `Note exported as ${format.toUpperCase()} successfully.`,
+    });
   };
 
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="lg:hidden"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <Input
             placeholder="Note title..."
             value={title}
@@ -132,9 +160,9 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId, onClose }) => {
               Saved {lastSaved.toLocaleTimeString()}
             </span>
           )}
-          <Button onClick={handleSave} size="sm" className="gap-2">
+          <Button onClick={() => handleSave()} size="sm" className="gap-2" disabled={saving}>
             <Save className="h-4 w-4" />
-            Save
+            {saving ? 'Saving...' : 'Save'}
           </Button>
           <Button 
             variant="outline" 
