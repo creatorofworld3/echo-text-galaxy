@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -66,7 +67,11 @@ export const SettingsDialog = () => {
       setFullName(data.full_name || '');
       setUsername(data.username || '');
       setAutoSaveInterval(data.auto_save_interval || 30);
-      setThemePreference(data.theme_preference || 'system');
+      // Properly cast the theme preference with fallback
+      const validTheme = ['light', 'dark', 'system'].includes(data.theme_preference) 
+        ? data.theme_preference as 'light' | 'dark' | 'system'
+        : 'system';
+      setThemePreference(validTheme);
     }
     setLoading(false);
   };
@@ -89,7 +94,11 @@ export const SettingsDialog = () => {
     if (!error) {
       setProfile(newProfile as UserProfile);
       setFullName(newProfile.full_name);
-      setThemePreference(newProfile.theme_preference);
+      // Properly cast the theme preference
+      const validTheme = ['light', 'dark', 'system'].includes(newProfile.theme_preference) 
+        ? newProfile.theme_preference as 'light' | 'dark' | 'system'
+        : 'system';
+      setThemePreference(validTheme);
       setAutoSaveInterval(newProfile.auto_save_interval);
     }
   };
@@ -205,7 +214,7 @@ export const SettingsDialog = () => {
               <div className="space-y-2">
                 <Label>Theme Preference</Label>
                 <div className="flex gap-2">
-                  {['light', 'dark', 'system'].map((themeOption) => (
+                  {(['light', 'dark', 'system'] as const).map((themeOption) => (
                     <Button
                       key={themeOption}
                       variant={themePreference === themeOption ? 'default' : 'outline'}
