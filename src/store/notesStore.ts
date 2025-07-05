@@ -3,7 +3,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Note, Folder } from '@/types/note';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 
 interface NotesState {
   notes: Note[];
@@ -38,14 +37,14 @@ export const useNotesStore = create<NotesState>()(
       setLoading: (loading) => set({ isLoading: loading }),
       
       addNote: async (noteData) => {
-        const { user } = await supabase.auth.getUser();
-        if (!user.user) throw new Error('User not authenticated');
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData.user) throw new Error('User not authenticated');
         
         const { data, error } = await supabase
           .from('notes')
           .insert({
             ...noteData,
-            user_id: user.user.id,
+            user_id: userData.user.id,
           })
           .select()
           .single();
@@ -108,14 +107,14 @@ export const useNotesStore = create<NotesState>()(
       },
       
       addFolder: async (folderData) => {
-        const { user } = await supabase.auth.getUser();
-        if (!user.user) throw new Error('User not authenticated');
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData.user) throw new Error('User not authenticated');
         
         const { data, error } = await supabase
           .from('folders')
           .insert({
             ...folderData,
-            user_id: user.user.id,
+            user_id: userData.user.id,
           })
           .select()
           .single();
@@ -244,7 +243,7 @@ export const useNotesStore = create<NotesState>()(
     }),
     {
       name: 'notes-storage',
-      partialize: (state) => ({ lastSync: state.lastSync }), // Only persist sync timestamp
+      partialize: (state) => ({ lastSync: state.lastSync }),
     }
   )
 );

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -40,7 +39,7 @@ export const SettingsDialog = () => {
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [autoSaveInterval, setAutoSaveInterval] = useState(30);
-  const [themePreference, setThemePreference] = useState('system');
+  const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>('system');
 
   useEffect(() => {
     if (user && isOpen) {
@@ -120,7 +119,7 @@ export const SettingsDialog = () => {
         title: "Success",
         description: "Profile updated successfully",
       });
-      setTheme(themePreference as any);
+      setTheme(themePreference);
     }
     setLoading(false);
   };
