@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId, onClose }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
+  
+  // Track if content has changed to prevent unnecessary saves
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentNote = noteId ? notes.find(n => n.id === noteId) : null;
 
@@ -34,27 +38,56 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId, onClose }) => {
       setContent(currentNote.content);
       setTags(currentNote.tags);
       setIsFavorite(currentNote.isFavorite);
+      setHasUnsavedChanges(false);
     } else {
       setTitle('');
       setContent('');
       setTags([]);
       setIsFavorite(false);
+      setHasUnsavedChanges(false);
     }
   }, [currentNote]);
 
-  // Auto-save functionality
+  // Mark content as changed when user types
   useEffect(() => {
-    const autoSaveInterval = setInterval(() => {
-      if (title.trim() || content.trim()) {
-        handleSave(false);
-      }
-    }, 30000); // Auto-save every 30 seconds
+    if (currentNote) {
+      const hasChanges = 
+        title !== currentNote.title ||
+        content !== currentNote.content ||
+        JSON.stringify(tags) !== JSON.stringify(currentNote.tags) ||
+        isFavorite !== currentNote.isFavorite;
+      setHasUnsavedChanges(hasChanges);
+    } else {
+      setHasUnsavedChanges(title.trim() !== '' || content.trim() !== '');
+    }
+  }, [title, content, tags, isFavorite, currentNote]);
 
-    return () => clearInterval(autoSaveInterval);
-  }, [title, content, tags, isFavorite]);
+  // Auto-save with debouncing to prevent infinite loops
+  useEffect(() => {
+    if (hasUnsavedChanges && !saving) {
+      // Clear previous timeout
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      
+      // Set new timeout for auto-save
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        if (title.trim() || content.trim()) {
+          handleSave(false);
+        }
+      }, 30000); // Auto-save every 30 seconds
+    }
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [hasUnsavedChanges, saving, title, content]);
 
   const handleSave = useCallback(async (showToast = true) => {
     if (!title.trim() && !content.trim()) return;
+    if (saving) return; // Prevent multiple simultaneous saves
 
     setSaving(true);
     try {
@@ -72,6 +105,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId, onClose }) => {
       }
       
       setLastSaved(new Date());
+      setHasUnsavedChanges(false);
       
       if (showToast) {
         toast({
@@ -89,7 +123,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId, onClose }) => {
     } finally {
       setSaving(false);
     }
-  }, [title, content, tags, isFavorite, currentNote, addNote, updateNote, toast]);
+  }, [title, content, tags, isFavorite, currentNote, addNote, updateNote, toast, saving]);
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -155,7 +189,12 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId, onClose }) => {
         </div>
         
         <div className="flex items-center gap-2">
-          {lastSaved && (
+          {hasUnsavedChanges && (
+            <span className="text-xs text-orange-500">
+              Unsaved changes
+            </span>
+          )}
+          {lastSaved && !hasUnsavedChanges && (
             <span className="text-xs text-muted-foreground">
               Saved {lastSaved.toLocaleTimeString()}
             </span>

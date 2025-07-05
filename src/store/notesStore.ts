@@ -43,7 +43,11 @@ export const useNotesStore = create<NotesState>()(
         const { data, error } = await supabase
           .from('notes')
           .insert({
-            ...noteData,
+            title: noteData.title,
+            content: noteData.content,
+            tags: noteData.tags,
+            is_favorite: noteData.isFavorite, // Map to correct database column
+            folder_id: noteData.folderId,
             user_id: userData.user.id,
           })
           .select()
@@ -56,7 +60,7 @@ export const useNotesStore = create<NotesState>()(
           title: data.title,
           content: data.content,
           tags: data.tags || [],
-          isFavorite: data.is_favorite || false,
+          isFavorite: data.is_favorite || false, // Map from database column
           folderId: data.folder_id,
           createdAt: new Date(data.created_at),
           updatedAt: new Date(data.updated_at),
@@ -75,7 +79,7 @@ export const useNotesStore = create<NotesState>()(
             title: updates.title,
             content: updates.content,
             tags: updates.tags,
-            is_favorite: updates.isFavorite,
+            is_favorite: updates.isFavorite, // Map to correct database column
             folder_id: updates.folderId,
           })
           .eq('id', id);
@@ -180,7 +184,7 @@ export const useNotesStore = create<NotesState>()(
           title: item.title,
           content: item.content || '',
           tags: item.tags || [],
-          isFavorite: item.is_favorite || false,
+          isFavorite: item.is_favorite || false, // Map from database column
           folderId: item.folder_id,
           createdAt: new Date(item.created_at),
           updatedAt: new Date(item.updated_at),
