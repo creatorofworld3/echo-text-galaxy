@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { Search, Star, FileText, Calendar, Hash, Plus, RefreshCw } from 'lucide-
 import { useNotesStore } from '@/store/notesStore';
 import { Note } from '@/types/note';
 import { useToast } from '@/hooks/use-toast';
+import { NoteContextMenu } from './NoteContextMenu';
 
 interface NotesListProps {
   onSelectNote: (noteId: string) => void;
@@ -53,6 +53,10 @@ export const NotesList: React.FC<NotesListProps> = ({
       // Default to date sorting
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
+
+  const handleEditNote = (noteId: string) => {
+    onSelectNote(noteId);
+  };
 
   const handleSync = async () => {
     try {
@@ -162,52 +166,57 @@ export const NotesList: React.FC<NotesListProps> = ({
             </div>
           ) : (
             filteredNotes.map((note) => (
-              <Card
-                key={note.id}
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  selectedNoteId === note.id 
-                    ? 'ring-2 ring-primary shadow-md' 
-                    : 'hover:bg-accent/50'
-                }`}
-                onClick={() => onSelectNote(note.id)}
+              <NoteContextMenu 
+                key={note.id} 
+                note={note} 
+                onEdit={handleEditNote}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium truncate flex-1">
-                        {note.title || 'Untitled Note'}
-                      </h3>
-                      {note.isFavorite && (
-                        <Star className="h-4 w-4 text-yellow-500 fill-current flex-shrink-0" />
-                      )}
-                    </div>
-                  </div>
-                  
-                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                    {truncateContent(note.content)}
-                  </p>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-wrap gap-1">
-                      {note.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {note.tags.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{note.tags.length - 3}
-                        </Badge>
-                      )}
+                <Card
+                  className={`cursor-pointer transition-all hover:shadow-md ${
+                    selectedNoteId === note.id 
+                      ? 'ring-2 ring-primary shadow-md' 
+                      : 'hover:bg-accent/50'
+                  }`}
+                  onClick={() => onSelectNote(note.id)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium truncate flex-1">
+                          {note.title || 'Untitled Note'}
+                        </h3>
+                        {note.isFavorite && (
+                          <Star className="h-4 w-4 text-yellow-500 fill-current flex-shrink-0" />
+                        )}
+                      </div>
                     </div>
                     
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      {formatDate(new Date(note.updatedAt))}
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                      {truncateContent(note.content)}
+                    </p>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap gap-1">
+                        {note.tags.slice(0, 3).map((tag) => (
+                          <Badge key={tag} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                        {note.tags.length > 3 && (
+                          <Badge variant="secondary" className="text-xs">
+                            +{note.tags.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        {formatDate(new Date(note.updatedAt))}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </NoteContextMenu>
             ))
           )}
         </div>
